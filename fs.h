@@ -1,6 +1,6 @@
-#include <stdint.h>
-#include <stdbool.h>
 #include "disk.h"
+#include <stdbool.h>
+#include <stdint.h>
 
 #define MAGIC_NUMBER (0xf0f03410)
 #define INODES_PER_BLOCK (128)

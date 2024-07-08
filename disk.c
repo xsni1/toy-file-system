@@ -70,6 +70,7 @@ ssize_t disk_write(Disk *disk, size_t block, char *data) {
 
   char buf[BLOCK_SIZE];
   memset(buf, 0, 4096);
+
   n = write(disk->fd, buf, BLOCK_SIZE);
   if (n == -1) {
     printf("error writing: %s\n", strerror(errno));

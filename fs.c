@@ -1,5 +1,6 @@
 #include "fs.h"
 #include <math.h>
+#include <stdint.h>
 #include <string.h>
 
 void fs_debug(Disk *disk) {}
@@ -19,17 +20,28 @@ bool fs_format(Disk *disk) {
   printf("inode_blocks: %d\n", sp.inode_blocks);
   printf("inodes: %d\n", sp.inodes);
 
-  char buffer[sizeof(SuperBlock)];
-  memcpy(buffer, &sp, sizeof(SuperBlock));
+  char sp_buf[sizeof(SuperBlock)];
+  memcpy(sp_buf, &sp, sizeof(SuperBlock));
 
-  int n = disk_write(disk, 0, buffer);
+  int n = disk_write(disk, 0, sp_buf);
   if (n == -1) {
     return false;
   }
 
   for (int i = 0; i < sp.inode_blocks; i++) {
-    char buf[4096];
-    disk_write(disk, i + 1, buf);
+    char inode_buf[sizeof(Inode)];
+    Inode inode;
+
+    inode.valid = 0;
+    inode.size = 0;
+    for (int i = 0; i < POINTERS_PER_INODE; i++) {
+        inode.direct[i] = 0;
+    }
+    inode.indirect = 0;
+
+    memcpy(inode_buf, &inode, sizeof(Inode));
+
+    disk_write(disk, i + 1, inode_buf);
     if (n == -1) {
       return false;
     }
