@@ -1,0 +1,39 @@
+#include "fs.h"
+#include <math.h>
+#include <string.h>
+
+void fs_debug(Disk *disk) {}
+
+// instead of 4096 use macro. how?
+bool fs_format(Disk *disk) {
+  SuperBlock sp;
+  int inode_blocks = ceil((disk->blocks - 1) * 0.1);
+
+  sp.magic_number = 0x309;
+  sp.blocks = disk->blocks;
+  sp.inode_blocks = inode_blocks;
+  sp.inodes = inode_blocks * 4096 / 16;
+
+  printf("magic number: %d\n", sp.magic_number);
+  printf("blocks: %d\n", sp.blocks);
+  printf("inode_blocks: %d\n", sp.inode_blocks);
+  printf("inodes: %d\n", sp.inodes);
+
+  char buffer[sizeof(SuperBlock)];
+  memcpy(buffer, &sp, sizeof(SuperBlock));
+
+  int n = disk_write(disk, 0, buffer);
+  if (n == -1) {
+    return false;
+  }
+
+  for (int i = 0; i < sp.inode_blocks; i++) {
+    char buf[4096];
+    disk_write(disk, i + 1, buf);
+    if (n == -1) {
+      return false;
+    }
+  }
+
+  return true;
+}
