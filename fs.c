@@ -3,7 +3,21 @@
 #include <stdint.h>
 #include <string.h>
 
-void fs_debug(Disk *disk) {}
+void fs_debug(Disk *disk) {
+  SuperBlock sp;
+  char sp_buf[4096];
+
+  disk_read(disk, 0, sp_buf);
+
+  sp = *(SuperBlock *)sp_buf;
+
+  printf("\n>>>>> DEBUG\n");
+  printf(">> SUPERBLOCK\n");
+  printf("Magic number: %d\n", sp.magic_number);
+  printf("Blocks: %d\n", sp.blocks);
+  printf("Inode blocks: %d\n", sp.inode_blocks);
+  printf("Inodes: %d\n", sp.inodes);
+}
 
 // instead of 4096 use macro. how?
 bool fs_format(Disk *disk) {
@@ -15,6 +29,7 @@ bool fs_format(Disk *disk) {
   sp.inode_blocks = inode_blocks;
   sp.inodes = inode_blocks * 4096 / 16;
 
+  printf(">>>>> FORMAT\n");
   printf("magic number: %d\n", sp.magic_number);
   printf("blocks: %d\n", sp.blocks);
   printf("inode_blocks: %d\n", sp.inode_blocks);
@@ -22,6 +37,9 @@ bool fs_format(Disk *disk) {
 
   char sp_buf[sizeof(SuperBlock)];
   memcpy(sp_buf, &sp, sizeof(SuperBlock));
+
+
+
 
   int n = disk_write(disk, 0, sp_buf);
   if (n == -1) {
@@ -35,7 +53,7 @@ bool fs_format(Disk *disk) {
     inode.valid = 0;
     inode.size = 0;
     for (int i = 0; i < POINTERS_PER_INODE; i++) {
-        inode.direct[i] = 0;
+      inode.direct[i] = 0;
     }
     inode.indirect = 0;
 

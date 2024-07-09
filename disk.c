@@ -65,25 +65,7 @@ ssize_t disk_write(Disk *disk, size_t block, char *data) {
     return -1;
   }
 
-  // curious things happen when this uncommencted
-  /* n = write(disk->fd, data, BLOCK_SIZE); */
-
-  char buf[BLOCK_SIZE];
-  memset(buf, 0, 4096);
-
-  n = write(disk->fd, buf, BLOCK_SIZE);
-  if (n == -1) {
-    printf("error writing: %s\n", strerror(errno));
-    return -1;
-  }
-
-  n = lseek(disk->fd, BLOCK_SIZE * block, SEEK_SET);
-  if (n == -1) {
-    printf("error lseek: %s\n", strerror(errno));
-    return -1;
-  }
-
-  n = write(disk->fd, data, strlen(data));
+  n = write(disk->fd, data, BLOCK_SIZE);
   if (n == -1) {
     printf("error writing: %s\n", strerror(errno));
     return -1;
