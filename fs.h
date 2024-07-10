@@ -12,6 +12,7 @@ struct SuperBlock {
   uint32_t magic_number;
   uint32_t blocks;
   uint32_t inode_blocks;
+  uint32_t bitmap_blocks;
   uint32_t inodes;
 };
 
