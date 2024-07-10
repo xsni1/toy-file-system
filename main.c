@@ -3,7 +3,7 @@
 #include <unistd.h>
 
 int main() {
-  Disk *disk = disk_open("file2", 10);
+  Disk *disk = disk_open("file2", 8000);
   char buf[4096];
 
   fs_format(disk);

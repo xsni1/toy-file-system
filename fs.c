@@ -3,6 +3,14 @@
 #include <stdint.h>
 #include <string.h>
 
+int min(int a, int b) {
+  if (a > b) {
+    return b;
+  }
+
+  return a;
+}
+
 void fs_debug(Disk *disk) {
   SuperBlock sp;
   char sp_buf[4096];
@@ -19,13 +27,14 @@ void fs_debug(Disk *disk) {
   printf("Bitmap blocks: %d\n", sp.bitmap_blocks);
   printf("Inodes: %d\n", sp.inodes);
 
-  for (int i = 0; i < sp.bitmap_blocks; i++) {
-    char buf[4096];
-    disk_read(disk, 1 + sp.inode_blocks + i, buf);
-    for (int j = 0; j < 4096; j++) {
-        printf("%c", buf[j]);
-    }
-  }
+  /* for (int i = 0; i < sp.bitmap_blocks; i++) { */
+  /*   char buf[4096]; */
+  /*   disk_read(disk, 1 + sp.inode_blocks + i, buf); */
+
+  /*   for (int j = 0; j < min(4096, (sp.blocks-1-sp.inode_blocks-sp.bitmap_blocks) - (i * 4096)); j++) { */
+  /*     printf("%c", buf[j]); */
+  /*   } */
+  /* } */
 
   /* for (int i = 0; i < sp.inode_blocks; i++) { */
   /*   printf(">> INODE_BLOCK #%d\n", i); */
@@ -50,6 +59,7 @@ bool fs_format(Disk *disk) {
   int inode_blocks = ceil((disk->blocks - 1) * 0.1);
   int data_blocks = disk->blocks - 1 - inode_blocks;
   int bitmap_blocks = ceil(data_blocks / 4096.0);
+  data_blocks -= bitmap_blocks;
 
   sp.magic_number = 0x309;
   sp.blocks = disk->blocks;
@@ -63,6 +73,7 @@ bool fs_format(Disk *disk) {
   printf("inode_blocks: %d\n", sp.inode_blocks);
   printf("bitmap_blocks: %d\n", sp.bitmap_blocks);
   printf("inodes: %d\n", sp.inodes);
+  printf("data blocks: %d\n", data_blocks);
 
   char sp_buf[sizeof(SuperBlock)];
   memcpy(sp_buf, &sp, sizeof(SuperBlock));
@@ -95,17 +106,11 @@ bool fs_format(Disk *disk) {
     }
   }
 
-  // seems ugly af
   for (int i = 0; i < sp.bitmap_blocks; i++) {
     char buf[4096];
 
-    for (int j = 0; j < 4096; j++) {
-      if (data_blocks <= 0) {
-        break;
-      }
-
+    for (int j = 0; j < min(4096, data_blocks - (i * 4096)); j++) {
       buf[j] = '1';
-      data_blocks--;
     }
 
     disk_write(disk, 1 + inode_blocks + i, buf);
