@@ -32,7 +32,7 @@ struct FileSystem {
 };
 
 void fs_debug(Disk *disk);
-bool fs_format(Disk *disk);
+bool fs_format(FileSystem *fs, Disk *disk);
 
 bool fs_mount(FileSystem *fs, Disk *disk);
 void fs_unmount(FileSystem *fs);

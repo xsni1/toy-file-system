@@ -27,14 +27,17 @@ void fs_debug(Disk *disk) {
   printf("Bitmap blocks: %d\n", sp.bitmap_blocks);
   printf("Inodes: %d\n", sp.inodes);
 
-  /* for (int i = 0; i < sp.bitmap_blocks; i++) { */
-  /*   char buf[4096]; */
-  /*   disk_read(disk, 1 + sp.inode_blocks + i, buf); */
+  /*
+    for (int i = 0; i < sp.bitmap_blocks; i++) {
+        char buf[4096];
+        disk_read(disk, 1 + sp.inode_blocks + i, buf);
 
-  /*   for (int j = 0; j < min(4096, (sp.blocks-1-sp.inode_blocks-sp.bitmap_blocks) - (i * 4096)); j++) { */
-  /*     printf("%c", buf[j]); */
-  /*   } */
-  /* } */
+        for (int j = 0; j < min(4096,
+      (sp.blocks-1-sp.inode_blocks-sp.bitmap_blocks) - (i * 4096)); j++) {
+          printf("%c", buf[j]);
+        }
+      }
+  */
 
   /* for (int i = 0; i < sp.inode_blocks; i++) { */
   /*   printf(">> INODE_BLOCK #%d\n", i); */
@@ -54,7 +57,7 @@ void fs_debug(Disk *disk) {
 }
 
 // instead of 4096 use macro. how?
-bool fs_format(Disk *disk) {
+bool fs_format(FileSystem *fs, Disk *disk) {
   SuperBlock sp;
   int inode_blocks = ceil((disk->blocks - 1) * 0.1);
   int data_blocks = disk->blocks - 1 - inode_blocks;
@@ -116,5 +119,12 @@ bool fs_format(Disk *disk) {
     disk_write(disk, 1 + inode_blocks + i, buf);
   }
 
+  fs->disk = disk;
+  fs->meta_data = sp;
+
   return true;
+}
+
+ssize_t fs_create(FileSystem *fs) {
+
 }

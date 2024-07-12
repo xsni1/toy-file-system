@@ -3,13 +3,14 @@
 #include <unistd.h>
 
 int main() {
+  FileSystem fs;
   Disk *disk = disk_open("file2", 8000);
   char buf[4096];
 
-  fs_format(disk);
-  fs_debug(disk);
+  fs_format(&fs, disk);
+  fs_debug(fs.disk);
 
   /* disk_read(disk, 0, buf); */
 
-  disk_close(disk);
+  disk_close(fs.disk);
 }
