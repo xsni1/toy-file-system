@@ -56,6 +56,12 @@ void fs_debug(Disk *disk) {
   /* } */
 }
 
+// ______________  ________________  _________________ _________________
+// | SUPERBLOCK |  | INODES TABLE |  | BITMAP BLOCKS | |  DATA BLOCKS  |
+// |____________|  |______________|  |_______________| |_______________|
+//
+// [  1  BLOCK  ]  [ inode_blocks ]  [ bitmap_blocks ]
+
 // instead of 4096 use macro. how?
 bool fs_format(FileSystem *fs, Disk *disk) {
   SuperBlock sp;
@@ -78,10 +84,7 @@ bool fs_format(FileSystem *fs, Disk *disk) {
   printf("inodes: %d\n", sp.inodes);
   printf("data blocks: %d\n", data_blocks);
 
-  char sp_buf[sizeof(SuperBlock)];
-  memcpy(sp_buf, &sp, sizeof(SuperBlock));
-
-  int n = disk_write(disk, 0, sp_buf);
+  int n = disk_write(disk, 0, (char *)&sp);
   if (n == -1) {
     return false;
   }
@@ -126,5 +129,21 @@ bool fs_format(FileSystem *fs, Disk *disk) {
 }
 
 ssize_t fs_create(FileSystem *fs) {
+  for (int i = 0; i < fs->meta_data.inode_blocks; i++) {
+    char buf[4096];
+    disk_read(fs->disk, i + 1, buf);
 
+    for (int j = 0; j < INODES_PER_BLOCK; j++) {
+      Inode *inode = (Inode *)(buf + (sizeof(Inode) * j));
+
+      if (inode->valid == 0) {
+        inode->valid = 1;
+        disk_write(fs->disk, i + 1, buf);
+
+        return (i + 1) * j;
+      }
+    }
+  }
+
+  return -1;
 }
