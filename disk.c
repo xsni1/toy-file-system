@@ -8,6 +8,7 @@
 
 #define BLOCK_SIZE 4096
 
+// disk blocks indexed starting from 0
 Disk *disk_open(char *path, size_t blocks) {
   int fd = open(path, O_CREAT | O_RDWR, 0666);
   if (fd == -1) {

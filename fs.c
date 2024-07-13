@@ -39,23 +39,24 @@ void fs_debug(Disk *disk) {
       }
   */
 
-  /* for (int i = 0; i < sp.inode_blocks; i++) { */
-  /*   printf(">> INODE_BLOCK #%d\n", i); */
+  for (int i = 0; i < sp.inode_blocks; i++) {
+    printf(">> INODE_BLOCK #%d\n", i);
 
-  /*   char inode_block_buf[4096]; */
-  /*   disk_read(disk, 1 + i, inode_block_buf); */
+    char inode_block_buf[4096];
+    disk_read(disk, 1 + i, inode_block_buf);
 
-  /*   for (int j = 0; j < INODES_PER_BLOCK; j++) { */
-  /*     Inode inode; */
-  /*     inode = *(Inode *)(inode_block_buf + (sizeof(Inode) * j)); */
+    for (int j = 0; j < INODES_PER_BLOCK; j++) {
+      Inode inode;
+      inode = *(Inode *)(inode_block_buf + (sizeof(Inode) * j));
 
-  /*     printf("> INODE #%d\n", j); */
-  /*     printf("Valid: %d\n", inode.valid); */
-  /*     printf("Size: %d\n", inode.size); */
-  /*   } */
-  /* } */
+      printf("> INODE #%d\n", j);
+      printf("Valid: %d\n", inode.valid);
+      printf("Size: %d\n", inode.size);
+    }
+  }
 }
 
+// Inodes are indexed startin from 0
 // ______________  ________________  _________________ _________________
 // | SUPERBLOCK |  | INODES TABLE |  | BITMAP BLOCKS | |  DATA BLOCKS  |
 // |____________|  |______________|  |_______________| |_______________|
@@ -74,7 +75,7 @@ bool fs_format(FileSystem *fs, Disk *disk) {
   sp.blocks = disk->blocks;
   sp.inode_blocks = inode_blocks;
   sp.bitmap_blocks = bitmap_blocks;
-  sp.inodes = inode_blocks * 4096 / 16;
+  sp.inodes = inode_blocks * 4096 / sizeof(Inode);
 
   printf(">>>>> FORMAT\n");
   printf("magic number: %d\n", sp.magic_number);
@@ -146,4 +147,29 @@ ssize_t fs_create(FileSystem *fs) {
   }
 
   return -1;
+}
+
+ssize_t fs_write(FileSystem *fs, size_t inode_number, char *data, size_t length,
+                 size_t offset) {
+  char buf[4096];
+  int inode_block = sizeof(Inode) * inode_number / 4096;
+  printf("inode_block: %d, meta.inode_blocks: %d\n", inode_block, fs->meta_data.inode_blocks);
+  if (inode_block >= fs->meta_data.inode_blocks) {
+    printf("inode_number out of bounds\n");
+    return -1;
+  }
+
+  int inode_number_in_block = inode_number % INODES_PER_BLOCK;
+
+  disk_read(fs->disk, 1 + inode_block, buf);
+
+  Inode *inode = (Inode *)(buf + (inode_number_in_block * sizeof(Inode)));
+
+  printf("block: %d, inode num: %d\n", inode_block, inode_number_in_block);
+
+  inode->valid = 123;
+
+  disk_write(fs->disk, 1 + inode_block, buf);
+
+  return 0;
 }
