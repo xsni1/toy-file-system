@@ -11,6 +11,35 @@ int min(int a, int b) {
   return a;
 }
 
+ssize_t find_free_block(FileSystem *fs) {
+  for (int i = 0; i < fs->meta_data.bitmap_blocks; i++) {
+    char buf[4096];
+
+    if (disk_read(fs->disk, 1 + fs->meta_data.inode_blocks + i, buf) == -1) {
+      printf("err disk_read\n");
+    }
+
+    for (int j = 0;
+         min(4096, (fs->meta_data.blocks - 1 - fs->meta_data.inode_blocks -
+                    fs->meta_data.bitmap_blocks) -
+                       (i * 4096)) > j;
+         j++) {
+      if (buf[j] == '1') {
+        buf[j] = '0';
+
+        if (disk_write(fs->disk, 1 + fs->meta_data.inode_blocks + i, buf) ==
+            -1) {
+          printf("err disk_write\n");
+        }
+
+        return (i * 4096) + j;
+      }
+    }
+  }
+
+  return -1;
+}
+
 void fs_debug(Disk *disk) {
   SuperBlock sp;
   char sp_buf[4096];
@@ -27,18 +56,6 @@ void fs_debug(Disk *disk) {
   printf("Bitmap blocks: %d\n", sp.bitmap_blocks);
   printf("Inodes: %d\n", sp.inodes);
 
-  /*
-    for (int i = 0; i < sp.bitmap_blocks; i++) {
-        char buf[4096];
-        disk_read(disk, 1 + sp.inode_blocks + i, buf);
-
-        for (int j = 0; j < min(4096,
-      (sp.blocks-1-sp.inode_blocks-sp.bitmap_blocks) - (i * 4096)); j++) {
-          printf("%c", buf[j]);
-        }
-      }
-  */
-
   for (int i = 0; i < sp.inode_blocks; i++) {
     printf(">> INODE_BLOCK #%d\n", i);
 
@@ -52,6 +69,18 @@ void fs_debug(Disk *disk) {
       printf("> INODE #%d\n", j);
       printf("Valid: %d\n", inode.valid);
       printf("Size: %d\n", inode.size);
+    }
+  }
+
+  for (int i = 0; i < sp.bitmap_blocks; i++) {
+    char buf[4096];
+    disk_read(disk, 1 + sp.inode_blocks + i, buf);
+
+    for (int j = 0;
+         j < min(4096, (sp.blocks - 1 - sp.inode_blocks - sp.bitmap_blocks) -
+                           (i * 4096));
+         j++) {
+      printf("%c", buf[j]);
     }
   }
 }
@@ -116,6 +145,7 @@ bool fs_format(FileSystem *fs, Disk *disk) {
   for (int i = 0; i < sp.bitmap_blocks; i++) {
     char buf[4096];
 
+    // data_blocks % (i * 4096) ??
     for (int j = 0; j < min(4096, data_blocks - (i * 4096)); j++) {
       buf[j] = '1';
     }
@@ -153,7 +183,7 @@ ssize_t fs_write(FileSystem *fs, size_t inode_number, char *data, size_t length,
                  size_t offset) {
   char buf[4096];
   int inode_block = sizeof(Inode) * inode_number / 4096;
-  printf("inode_block: %d, meta.inode_blocks: %d\n", inode_block, fs->meta_data.inode_blocks);
+
   if (inode_block >= fs->meta_data.inode_blocks) {
     printf("inode_number out of bounds\n");
     return -1;
@@ -165,9 +195,19 @@ ssize_t fs_write(FileSystem *fs, size_t inode_number, char *data, size_t length,
 
   Inode *inode = (Inode *)(buf + (inode_number_in_block * sizeof(Inode)));
 
-  printf("block: %d, inode num: %d\n", inode_block, inode_number_in_block);
+  int n = 0;
+  for (int i = 0; i < 5; i++) {
+    char buf[4096];
+    int save = min(4096, length);
 
-  inode->valid = 123;
+    int free_block = find_free_block(fs);
+    printf("%d\n", free_block);
+
+    length -= save;
+    if (length <= 0) {
+      break;
+    }
+  }
 
   disk_write(fs->disk, 1 + inode_block, buf);
 

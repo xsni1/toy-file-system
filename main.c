@@ -5,7 +5,7 @@
 // TODO: memcpy() could be avoided in most of cases. unions could be used.
 int main() {
   FileSystem fs;
-  Disk *disk = disk_open("file2", 12);
+  Disk *disk = disk_open("file2", 8000);
   char buf[4096];
 
   fs_format(&fs, disk);
@@ -22,6 +22,7 @@ int main() {
   /* disk_read(disk, 0, buf); */
 
   fs_write(&fs, 255, buf, 1, 1);
+
   fs_debug(fs.disk);
 
   disk_close(fs.disk);
