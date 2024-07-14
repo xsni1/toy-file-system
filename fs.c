@@ -11,6 +11,8 @@ int min(int a, int b) {
   return a;
 }
 
+// blocks have to be indexed starting from 1, to be able to differentiate from
+// uninitialized pointers
 ssize_t find_free_block(FileSystem *fs) {
   for (int i = 0; i < fs->meta_data.bitmap_blocks; i++) {
     char buf[4096];
@@ -32,7 +34,7 @@ ssize_t find_free_block(FileSystem *fs) {
           printf("err disk_write\n");
         }
 
-        return (i * 4096) + j;
+        return (i * 4096) + j + 1;
       }
     }
   }
@@ -69,20 +71,25 @@ void fs_debug(Disk *disk) {
       printf("> INODE #%d\n", j);
       printf("Valid: %d\n", inode.valid);
       printf("Size: %d\n", inode.size);
+
+      for (int j = 0; j < POINTERS_PER_INODE; j++) {
+        printf("Pointer[%d]: %d\n", j, inode.direct[j]);
+      }
     }
   }
 
-  for (int i = 0; i < sp.bitmap_blocks; i++) {
-    char buf[4096];
-    disk_read(disk, 1 + sp.inode_blocks + i, buf);
+  /* for (int i = 0; i < sp.bitmap_blocks; i++) { */
+  /*   char buf[4096]; */
+  /*   disk_read(disk, 1 + sp.inode_blocks + i, buf); */
 
-    for (int j = 0;
-         j < min(4096, (sp.blocks - 1 - sp.inode_blocks - sp.bitmap_blocks) -
-                           (i * 4096));
-         j++) {
-      printf("%c", buf[j]);
-    }
-  }
+  /*   for (int j = 0; */
+  /*        j < min(4096, (sp.blocks - 1 - sp.inode_blocks - sp.bitmap_blocks) -
+   */
+  /*                          (i * 4096)); */
+  /*        j++) { */
+  /*     printf("%c", buf[j]); */
+  /*   } */
+  /* } */
 }
 
 // Inodes are indexed startin from 0
@@ -194,14 +201,22 @@ ssize_t fs_write(FileSystem *fs, size_t inode_number, char *data, size_t length,
   disk_read(fs->disk, 1 + inode_block, buf);
 
   Inode *inode = (Inode *)(buf + (inode_number_in_block * sizeof(Inode)));
+  inode->size = length;
 
   int n = 0;
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < INODES_PER_BLOCK; i++) {
     char buf[4096];
     int save = min(4096, length);
-
+    printf("saving: %d\n", save);
     int free_block = find_free_block(fs);
-    printf("%d\n", free_block);
+
+    memcpy(buf, &data[n], save);
+    disk_write(fs->disk,
+               free_block + fs->meta_data.inode_blocks +
+                   fs->meta_data.bitmap_blocks,
+               buf);
+
+    inode->direct[i] = free_block;
 
     length -= save;
     if (length <= 0) {
