@@ -225,6 +225,21 @@ ssize_t fs_write(FileSystem *fs, size_t inode_number, char *data, size_t length,
     }
   }
 
+  if (length > 0) {
+    char block[4096];
+
+    int n = 0;
+    while (length > 0) {
+      int save = min(4096, length);
+      /* memcpy(&block[n], ) */
+      length -= save;
+      n += 4;
+    }
+
+    int free_block = find_free_block(fs);
+    disk_write(fs->disk, free_block + fs->meta_data.inode_blocks + fs->meta_data.bitmap_blocks, block);
+  }
+
   disk_write(fs->disk, 1 + inode_block, buf);
 
   return 0;
@@ -252,9 +267,12 @@ ssize_t fs_read(FileSystem *fs, size_t inode_number, char *data, size_t length,
 
     printf("reading from n: %d, reading bytes: %d\n", n, save);
 
-    // problem taki ze disk read czyta prosto do data, ktore moze byc mniejsze!!!
-    if (disk_read(fs->disk, data_block + fs->meta_data.inode_blocks + fs->meta_data.bitmap_blocks, block) == -1) {
-    /* if (disk_read(fs->disk, data_block + fs->meta_data.inode_blocks + fs->meta_data.bitmap_blocks, &data[n]) == -1) { */
+    // problem taki ze disk read czyta prosto do data, ktore moze byc
+    // mniejsze!!!
+    if (disk_read(fs->disk,
+                  data_block + fs->meta_data.inode_blocks +
+                      fs->meta_data.bitmap_blocks,
+                  block) == -1) {
       printf("error disk_read\n");
       return -1;
     }
