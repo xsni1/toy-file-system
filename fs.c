@@ -204,10 +204,10 @@ ssize_t fs_write(FileSystem *fs, size_t inode_number, char *data, size_t length,
   inode->size = length;
 
   int n = 0;
-  for (int i = 0; i < INODES_PER_BLOCK; i++) {
+  for (int i = 0; i < POINTERS_PER_INODE; i++) {
     char buf[4096];
     int save = min(4096, length);
-    printf("saving: %d\n", save);
+    printf("saving: %d, i: %d\n", save, i);
     int free_block = find_free_block(fs);
 
     memcpy(buf, &data[n], save);
@@ -226,18 +226,28 @@ ssize_t fs_write(FileSystem *fs, size_t inode_number, char *data, size_t length,
   }
 
   if (length > 0) {
-    char block[4096];
+      printf("direct blocks used, %zu bytes left to save\n", length);
+    int block_pointers[POINTERS_PER_BLOCK];
 
-    int n = 0;
+    int nn = 0;
     while (length > 0) {
+      char block[4096];
       int save = min(4096, length);
-      /* memcpy(&block[n], ) */
+      int free_block = find_free_block(fs);
+
+      memcpy(block, &data[n], save);
+      disk_write(fs->disk, free_block, block);
+
+      printf("saving in indirect block: %d, bytes: %d\n", free_block, save);
+      block_pointers[nn] = free_block;
+
       length -= save;
-      n += 4;
+      n += save;
+      nn += 4;
     }
 
     int free_block = find_free_block(fs);
-    disk_write(fs->disk, free_block + fs->meta_data.inode_blocks + fs->meta_data.bitmap_blocks, block);
+    disk_write(fs->disk, free_block + fs->meta_data.inode_blocks + fs->meta_data.bitmap_blocks, (char *)block_pointers);
   }
 
   disk_write(fs->disk, 1 + inode_block, buf);
