@@ -226,7 +226,7 @@ ssize_t fs_write(FileSystem *fs, size_t inode_number, char *data, size_t length,
   }
 
   if (length > 0) {
-      printf("direct blocks used, %zu bytes left to save\n", length);
+    printf("direct blocks used, %zu bytes left to save\n", length);
     int block_pointers[POINTERS_PER_BLOCK];
 
     int nn = 0;
@@ -243,10 +243,11 @@ ssize_t fs_write(FileSystem *fs, size_t inode_number, char *data, size_t length,
 
       length -= save;
       n += save;
-      nn += 4;
+      nn++;
     }
 
     int free_block = find_free_block(fs);
+    inode->indirect = free_block + fs->meta_data.inode_blocks + fs->meta_data.bitmap_blocks;
     disk_write(fs->disk, free_block + fs->meta_data.inode_blocks + fs->meta_data.bitmap_blocks, (char *)block_pointers);
   }
 
@@ -255,8 +256,7 @@ ssize_t fs_write(FileSystem *fs, size_t inode_number, char *data, size_t length,
   return 0;
 }
 
-ssize_t fs_read(FileSystem *fs, size_t inode_number, char *data, size_t length,
-                size_t offset) {
+ssize_t fs_read(FileSystem *fs, size_t inode_number, char *data, size_t length, size_t offset) {
   int inode_block = inode_number / INODES_PER_BLOCK;
   int inode_number_in_block = inode_number - (inode_block * INODES_PER_BLOCK);
   char buf[4096];
@@ -277,12 +277,7 @@ ssize_t fs_read(FileSystem *fs, size_t inode_number, char *data, size_t length,
 
     printf("reading from n: %d, reading bytes: %d\n", n, save);
 
-    // problem taki ze disk read czyta prosto do data, ktore moze byc
-    // mniejsze!!!
-    if (disk_read(fs->disk,
-                  data_block + fs->meta_data.inode_blocks +
-                      fs->meta_data.bitmap_blocks,
-                  block) == -1) {
+    if (disk_read(fs->disk, data_block + fs->meta_data.inode_blocks + fs->meta_data.bitmap_blocks, block) == -1) {
       printf("error disk_read\n");
       return -1;
     }
@@ -294,6 +289,17 @@ ssize_t fs_read(FileSystem *fs, size_t inode_number, char *data, size_t length,
 
     if (length <= 0) {
       break;
+    }
+  }
+
+  if (length > 0) {
+    int block_numbers[POINTERS_PER_BLOCK];
+    disk_read(fs->disk, inode->indirect, (char *)block_numbers);
+
+    printf("reading from indirect block: %d\n", inode->indirect);
+
+    for (int i = 0; i < 3; i++) {
+        printf("block: %d\n", block_numbers[i]);
     }
   }
 

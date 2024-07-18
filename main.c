@@ -422,14 +422,14 @@ int main() {
 
   fs_write(&fs, 255, a, 5476*6, 0);
 
-  char rbuf[2000];
+  char rbuf[5476*6];
   char abuf[2000];
 
   for (int i = 0; i < 2000; i++) {
     abuf[i] = 'C';
   }
 
-  fs_read(&fs, 255, rbuf, 5476, 0);
+  fs_read(&fs, 255, rbuf, 5476*6, 0);
 
   /* for (int i = 0; i < 2000; i++) { */
   /*     printf("%c", abuf[i]); */
@@ -450,7 +450,7 @@ int main() {
   /*     } */
   /* } */
 
-  fs_debug(fs.disk);
+  /* fs_debug(fs.disk); */
 
   disk_close(fs.disk);
 }
